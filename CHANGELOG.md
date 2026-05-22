@@ -19,9 +19,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Explicit safe YAML schema.** YAML parsing now pins the code-free `core`
   schema (YAML 1.2) with an explicit alias-count cap and silenced tag warnings,
   making the "no custom-tag code execution" guarantee explicit and stable.
-- **Dependencies.** Bumped dev-only `vitest` (→ ^4) and `esbuild` (→ ^0.25) to
-  clear 5 moderate `npm audit` advisories (esbuild/vite dev-server CVEs). No
-  runtime dependencies were affected. `npm audit` now reports 0 vulnerabilities.
+- **Dependencies.** Bumped dev-only `vitest` (→ ^4) and `esbuild` (→ ^0.28, a
+  single deduped copy) to clear 5 moderate `npm audit` advisories (esbuild/vite
+  dev-server CVEs). No runtime dependencies were affected. `npm audit` now
+  reports 0 vulnerabilities.
+
+### Changed
+
+- **CI.** vitest 4 / vite 8 require Node >= 20.19, so the vitest-based job now
+  runs on Node 20 and 22. A separate Node 18 job builds the CLI/playground and
+  runs the standalone smoke test, preserving the documented `engines >= 18`
+  runtime contract.
 
 ### Added
 
