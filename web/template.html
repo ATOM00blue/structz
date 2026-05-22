@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>structz — JSON / YAML / CSV / TOML playground</title>
+    <meta
+      name="description"
+      content="Convert and query between JSON, YAML, CSV, and TOML entirely in your browser. Zero network, fully offline."
+    />
+    <meta name="color-scheme" content="dark light" />
+    <style>
+      :root {
+        --bg: #0c1016;
+        --bg-2: #0f141c;
+        --ink: #e8ecf3;
+        --muted: #8993a4;
+        --accent: #4f8cff; /* cobalt */
+        --accent-2: #ffb24d; /* amber */
+        --ok: #4cd08a;
+        --err: #ff6b6b;
+        --display: "Space Mono", ui-monospace, monospace;
+        --mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo,
+          Consolas, monospace;
+        --line: rgba(232, 236, 243, 0.12);
+        --line-soft: rgba(232, 236, 243, 0.05);
+        --card: rgba(232, 236, 243, 0.025);
+        --radius: 10px;
+        --cell: 76px;
+        --maxw: 1180px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--mono);
+        font-size: 15px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Grain overlay */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.05;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        mix-blend-mode: overlay;
+      }
+
+      .wrap {
+        position: relative;
+        z-index: 2;
+        max-width: var(--maxw);
+        margin-inline: auto;
+        padding: 0 20px 80px;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      /* ---- Header ---- */
+      header.top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
+        padding: 18px 0;
+        flex-wrap: wrap;
+      }
+      .brand {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+      }
+      .logo {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 1.5rem;
+        letter-spacing: -0.04em;
+      }
+      .logo b {
+        color: var(--accent);
+      }
+      .tagline {
+        color: var(--muted);
+        font-size: 0.8rem;
+        letter-spacing: 0.02em;
+      }
+      .links {
+        display: flex;
+        gap: 18px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      /* ---- Hero / section head ---- */
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 20px 0 14px;
+      }
+      .section-head .count b {
+        color: var(--accent-2);
+      }
+
+      .blueprint {
+        background-image: repeating-linear-gradient(
+            to right,
+            var(--line-soft) 0 1px,
+            transparent 1px var(--cell)
+          ),
+          repeating-linear-gradient(
+            to bottom,
+            var(--line-soft) 0 1px,
+            transparent 1px var(--cell)
+          );
+      }
+
+      h1.hero {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: clamp(1.9rem, 5vw, 3rem);
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+        margin: 6px 0 10px;
+      }
+      h1.hero em {
+        font-style: italic;
+        color: var(--accent-2);
+      }
+      .sub {
+        color: var(--muted);
+        max-width: 60ch;
+        margin: 0 0 18px;
+      }
+
+      .install {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--card);
+        padding: 10px 14px;
+        font-size: 0.85rem;
+      }
+      .install .dollar {
+        color: var(--accent-2);
+      }
+      .install button {
+        margin-left: 6px;
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        cursor: pointer;
+      }
+      .install button:hover {
+        color: var(--ink);
+        border-color: var(--accent);
+      }
+
+      /* ---- Controls ---- */
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px 22px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--card);
+        padding: 14px 16px;
+        margin-bottom: 14px;
+      }
+      .ctl {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .ctl label {
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+      }
+      .ctl select,
+      .ctl input[type="text"],
+      .ctl input[type="number"] {
+        background: var(--bg-2);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px 9px;
+        font-family: var(--mono);
+        font-size: 0.85rem;
+      }
+      .ctl input[type="text"] {
+        min-width: 200px;
+      }
+      .ctl.check {
+        flex-direction: row;
+        align-items: center;
+        gap: 7px;
+      }
+      .ctl.check label {
+        letter-spacing: 0.06em;
+      }
+      .swap {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--accent);
+        border-radius: 6px;
+        padding: 7px 11px;
+        font-family: var(--mono);
+        cursor: pointer;
+        font-size: 0.85rem;
+        align-self: flex-end;
+      }
+      .swap:hover {
+        border-color: var(--accent);
+        background: rgba(79, 140, 255, 0.08);
+      }
+
+      /* ---- Editor grid ---- */
+      .editor {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 760px) {
+        .editor {
+          grid-template-columns: 1fr;
+        }
+      }
+      .pane {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--bg-2);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 360px;
+      }
+      .pane-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        padding: 9px 13px;
+        font-size: 0.68rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .pane-head .badge {
+        color: var(--accent-2);
+      }
+      .pane-head .copy {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        border-radius: 5px;
+        padding: 2px 8px;
+        font-family: var(--mono);
+        font-size: 0.62rem;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .pane-head .copy:hover {
+        color: var(--ink);
+        border-color: var(--accent);
+      }
+      textarea,
+      pre.out {
+        flex: 1;
+        margin: 0;
+        border: 0;
+        padding: 14px;
+        background: transparent;
+        color: var(--ink);
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        line-height: 1.55;
+        resize: none;
+        white-space: pre;
+        overflow: auto;
+        tab-size: 2;
+      }
+      textarea:focus {
+        outline: none;
+      }
+      pre.out.error {
+        color: var(--err);
+        white-space: pre-wrap;
+      }
+
+      .status {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        margin-top: 10px;
+        font-size: 0.72rem;
+        color: var(--muted);
+        flex-wrap: wrap;
+      }
+      .status .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--ok);
+        margin-right: 6px;
+      }
+      .status .dot.bad {
+        background: var(--err);
+      }
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 2px 10px;
+        color: var(--accent-2);
+      }
+
+      /* ---- Examples ---- */
+      .examples {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 14px 0;
+      }
+      .examples button {
+        background: var(--card);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        border-radius: 6px;
+        padding: 6px 11px;
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        cursor: pointer;
+      }
+      .examples button:hover {
+        color: var(--ink);
+        border-color: var(--accent);
+      }
+
+      /* ---- Footer ---- */
+      footer {
+        position: relative;
+        margin-top: 60px;
+        border-top: 1px solid var(--line);
+        padding-top: 24px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+      .watermark {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: clamp(3rem, 14vw, 9rem);
+        letter-spacing: -0.05em;
+        color: transparent;
+        -webkit-text-stroke: 1px var(--line);
+        line-height: 0.9;
+        margin: 10px 0 0;
+        user-select: none;
+        overflow: hidden;
+      }
+      ::selection {
+        background: rgba(79, 140, 255, 0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <div class="brand">
+          <span class="logo">struct<b>z</b></span>
+          <span class="tagline">JSON · YAML · CSV · TOML</span>
+        </div>
+        <nav class="links">
+          <a href="https://github.com/ATOM00blue/structz">GitHub</a>
+          <a href="https://www.npmjs.com/package/structz">npm</a>
+        </nav>
+      </header>
+
+      <section class="blueprint" style="padding: 30px 18px; margin-top: 8px; border-radius: var(--radius);">
+        <div class="section-head">
+          <span>// in-browser playground</span>
+          <span class="count">[<b>00</b>/runs offline]</span>
+        </div>
+        <h1 class="hero">Convert &amp; query data <em>without leaving the tab.</em></h1>
+        <p class="sub">
+          Paste anything — JSON, YAML, CSV, or TOML. structz auto-detects the
+          format, converts any-to-any, and runs jq-lite path queries. Everything
+          happens locally in your browser; no data ever leaves this page.
+        </p>
+        <div class="install">
+          <span class="dollar">$</span><span>npx structz config.yaml -t json</span>
+          <button id="copy-install" type="button">copy</button>
+        </div>
+      </section>
+
+      <div class="section-head">
+        <span>// controls</span>
+        <span class="count">[<b>01</b>/03]</span>
+      </div>
+
+      <div class="controls">
+        <div class="ctl">
+          <label for="from">From</label>
+          <select id="from">
+            <option value="auto" selected>auto-detect</option>
+            <option value="json">JSON</option>
+            <option value="yaml">YAML</option>
+            <option value="csv">CSV</option>
+            <option value="toml">TOML</option>
+          </select>
+        </div>
+        <button class="swap" id="swap" type="button" title="Swap input/output formats">⇄ swap</button>
+        <div class="ctl">
+          <label for="to">To</label>
+          <select id="to">
+            <option value="json" selected>JSON</option>
+            <option value="yaml">YAML</option>
+            <option value="csv">CSV</option>
+            <option value="toml">TOML</option>
+          </select>
+        </div>
+        <div class="ctl">
+          <label for="query">Query (jq-lite, optional)</label>
+          <input type="text" id="query" placeholder="e.g. users[*].name" />
+        </div>
+        <div class="ctl">
+          <label for="indent">Indent</label>
+          <input type="number" id="indent" min="0" max="8" value="2" style="width: 64px" />
+        </div>
+        <div class="ctl check">
+          <input type="checkbox" id="minify" />
+          <label for="minify">Minify JSON</label>
+        </div>
+      </div>
+
+      <div class="examples">
+        <span style="color: var(--muted); align-self: center; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;">try:</span>
+        <button data-example="json" type="button">JSON config</button>
+        <button data-example="yaml" type="button">YAML config</button>
+        <button data-example="csv" type="button">CSV table</button>
+        <button data-example="toml" type="button">TOML config</button>
+        <button data-example="query" type="button">Query demo</button>
+      </div>
+
+      <div class="editor">
+        <div class="pane">
+          <div class="pane-head">
+            <span>input · <span class="badge" id="detected">auto</span></span>
+            <button class="copy" id="clear" type="button">clear</button>
+          </div>
+          <textarea id="input" spellcheck="false" placeholder="Paste JSON, YAML, CSV, or TOML here…"></textarea>
+        </div>
+        <div class="pane">
+          <div class="pane-head">
+            <span>output · <span class="badge" id="out-fmt">json</span></span>
+            <button class="copy" id="copy-out" type="button">copy</button>
+          </div>
+          <pre class="out" id="output"></pre>
+        </div>
+      </div>
+
+      <div class="status">
+        <span><span class="dot" id="status-dot"></span><span id="status-text">ready</span></span>
+        <span class="pill" id="status-detected">detected: —</span>
+      </div>
+
+      <footer>
+        <div class="section-head" style="padding-left: 0">
+          <span>// structz</span>
+          <span class="count">MIT · runs 100% offline</span>
+        </div>
+        <p>
+          A tiny tool to convert and query JSON / YAML / CSV / TOML — from the CLI
+          (<code>npx structz</code>) or right here in the browser.
+          <a href="https://github.com/ATOM00blue/structz">Source on GitHub →</a>
+        </p>
+        <div class="watermark">structz</div>
+      </footer>
+    </div>
+
+    <!-- structz core, bundled inline at build time (no network requests) -->
+    <script>/*__STRUCTZ_BUNDLE__*/</script>
+    <script>
+      (function () {
+        "use strict";
+        var S = window.structz;
+        var $ = function (id) { return document.getElementById(id); };
+        var input = $("input"),
+          output = $("output"),
+          fromSel = $("from"),
+          toSel = $("to"),
+          querySel = $("query"),
+          indentSel = $("indent"),
+          minifySel = $("minify"),
+          detected = $("detected"),
+          outFmt = $("out-fmt"),
+          statusDot = $("status-dot"),
+          statusText = $("status-text"),
+          statusDetected = $("status-detected");
+
+        var EXAMPLES = {
+          json: '{\n  "name": "structz",\n  "version": 1,\n  "tags": ["json", "yaml", "csv", "toml"],\n  "server": { "host": "localhost", "port": 8080 }\n}',
+          yaml: "name: structz\nversion: 1\ntags:\n  - json\n  - yaml\n  - csv\n  - toml\nserver:\n  host: localhost\n  port: 8080",
+          csv: "id,name,role,active\n1,Ada,admin,true\n2,Linus,dev,true\n3,Grace,dev,false",
+          toml: 'title = "structz demo"\n\n[server]\nhost = "localhost"\nport = 8080\n\n[[users]]\nname = "Ada"\nrole = "admin"',
+          query: '{\n  "users": [\n    { "name": "Ada", "email": "ada@example.com" },\n    { "name": "Linus", "email": "linus@example.com" }\n  ]\n}',
+        };
+
+        function render() {
+          var opts = {
+            from: fromSel.value,
+            to: toSel.value,
+            indent: parseInt(indentSel.value, 10) || 0,
+            minify: minifySel.checked,
+            query: querySel.value,
+          };
+          var res = S.run(input.value, opts);
+          detected.textContent = res.detected;
+          outFmt.textContent = toSel.value;
+          statusDetected.textContent = "detected: " + res.detected;
+          if (res.ok) {
+            output.textContent = res.output;
+            output.classList.remove("error");
+            statusDot.classList.remove("bad");
+            statusText.textContent = input.value.trim()
+              ? "converted ok"
+              : "ready";
+          } else {
+            output.textContent = "✗ " + res.error;
+            output.classList.add("error");
+            statusDot.classList.add("bad");
+            statusText.textContent = "error";
+          }
+        }
+
+        // Wire events
+        [input, fromSel, toSel, querySel, indentSel].forEach(function (el) {
+          el.addEventListener("input", render);
+          el.addEventListener("change", render);
+        });
+        minifySel.addEventListener("change", render);
+
+        $("swap").addEventListener("click", function () {
+          var from = fromSel.value === "auto" ? detected.textContent : fromSel.value;
+          var to = toSel.value;
+          // Use current output as the new input.
+          if (output.textContent && !output.classList.contains("error")) {
+            input.value = output.textContent;
+          }
+          fromSel.value = to;
+          toSel.value = from && from !== "auto" ? from : "json";
+          render();
+        });
+
+        $("clear").addEventListener("click", function () {
+          input.value = "";
+          render();
+          input.focus();
+        });
+
+        function copy(text, btn) {
+          var label = btn.textContent;
+          var done = function () {
+            btn.textContent = "copied!";
+            setTimeout(function () { btn.textContent = label; }, 1200);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, done);
+          } else {
+            done();
+          }
+        }
+        $("copy-out").addEventListener("click", function () {
+          copy(output.textContent, this);
+        });
+        $("copy-install").addEventListener("click", function () {
+          copy("npx structz config.yaml -t json", this);
+        });
+
+        document.querySelectorAll(".examples button").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var key = btn.getAttribute("data-example");
+            input.value = EXAMPLES[key];
+            fromSel.value = "auto";
+            if (key === "query") {
+              querySel.value = "users[*].email";
+              toSel.value = "json";
+            } else {
+              querySel.value = "";
+              toSel.value = key === "json" ? "yaml" : "json";
+            }
+            render();
+          });
+        });
+
+        // Seed with the YAML example.
+        input.value = EXAMPLES.yaml;
+        render();
+      })();
+    </script>
+  </body>
+</html>
