@@ -7,6 +7,8 @@ on:
     branches: [main]
 
 jobs:
+  # Full toolchain (type-check, build, vitest, smoke). vitest 4 / vite 8
+  # require Node >= 20.19, so the test matrix runs on Node 20 and 22.
   test:
     name: test (node ${{ matrix.node }} / ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -14,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        node: [18, 20, 22]
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
 
@@ -37,4 +39,35 @@ jobs:
         run: npm test
 
       - name: Smoke test
+        run: npm run smoke
+
+  # The published package supports Node >= 18 (see package.json engines). The
+  # dev/test toolchain no longer does, so verify runtime compatibility on
+  # Node 18 separately: build the CLI/playground and run the end-to-end smoke
+  # test (no vitest, which requires Node >= 20).
+  runtime-node18:
+    name: runtime compat (node 18 / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      # Dev deps include tools that declare engines >= 20; they are not needed
+      # at runtime, so ignore the engine check for this build-only job.
+      - name: Install dependencies
+        run: npm ci --engine-strict=false
+
+      - name: Build (CLI + playground)
+        run: npm run build:all
+
+      - name: Smoke test (built CLI, no vitest)
         run: npm run smoke
