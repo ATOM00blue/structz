@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 import { ParseError, StringifyError } from "../core/errors.js";
+import { sanitize } from "../core/sanitize.js";
 
 /** Options controlling CSV parsing. */
 export interface CsvParseOptions {
@@ -34,7 +35,9 @@ export function parseCsv(input: string, options: CsvParseOptions = {}): unknown 
     const first = result.errors[0];
     throw new ParseError("csv", `${first.message} (row ${first.row ?? "?"})`);
   }
-  return result.data;
+  // Sanitize so a header named `__proto__`/`constructor`/`prototype` cannot
+  // produce prototype-polluting keys on the row objects.
+  return sanitize(result.data);
 }
 
 /**

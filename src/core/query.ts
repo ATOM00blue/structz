@@ -1,4 +1,5 @@
 import { QueryError } from "./errors.js";
+import { isForbiddenKey } from "./sanitize.js";
 
 /**
  * structz "jq-lite" path engine.
@@ -182,6 +183,12 @@ export function query(value: unknown, expr: string): unknown {
 function getKey(value: unknown, name: string): unknown {
   if (value === null || value === undefined) return undefined;
   if (typeof value !== "object" || Array.isArray(value)) return undefined;
+  // Never let a query cross into the prototype chain: refuse the polluting key
+  // names and only ever read own enumerable properties. Without this,
+  // `["__proto__"]` returned Object.prototype and `.constructor` reached the
+  // Function constructor — an info-disclosure / pollution gadget.
+  if (isForbiddenKey(name)) return undefined;
+  if (!Object.prototype.hasOwnProperty.call(value, name)) return undefined;
   return (value as Record<string, unknown>)[name];
 }
 

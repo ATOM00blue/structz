@@ -1,4 +1,5 @@
 import { ParseError, StringifyError } from "../core/errors.js";
+import { sanitize } from "../core/sanitize.js";
 
 /** Options controlling JSON serialization. */
 export interface JsonStringifyOptions {
@@ -8,10 +9,15 @@ export interface JsonStringifyOptions {
   minify?: boolean;
 }
 
-/** Parse a JSON document into a plain JavaScript value. */
+/**
+ * Parse a JSON document into a plain JavaScript value.
+ *
+ * The result is sanitized so that prototype-polluting keys
+ * (`__proto__`/`constructor`/`prototype`) cannot escape the parse boundary.
+ */
 export function parseJson(input: string): unknown {
   try {
-    return JSON.parse(input);
+    return sanitize(JSON.parse(input));
   } catch (err) {
     throw new ParseError("json", (err as Error).message);
   }

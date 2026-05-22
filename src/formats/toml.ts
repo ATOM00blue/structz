@@ -1,10 +1,16 @@
 import { parse, stringify } from "smol-toml";
 import { ParseError, StringifyError } from "../core/errors.js";
+import { sanitize } from "../core/sanitize.js";
 
-/** Parse a TOML document into a plain JavaScript value. */
+/**
+ * Parse a TOML document into a plain JavaScript value.
+ *
+ * The result is sanitized so that prototype-polluting keys
+ * (`__proto__`/`constructor`/`prototype`) cannot escape the parse boundary.
+ */
 export function parseToml(input: string): unknown {
   try {
-    return parse(input);
+    return sanitize(parse(input));
   } catch (err) {
     throw new ParseError("toml", (err as Error).message);
   }

@@ -6,6 +6,29 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- **Prototype-pollution hardening.** All parsers (JSON, YAML, CSV, TOML) now
+  sanitize their output through a depth-bounded, cycle-safe deep walk that strips
+  `__proto__` / `constructor` / `prototype` keys, so attacker-controlled
+  documents can no longer hand library consumers a prototype-pollution gadget.
+- **Query engine prototype-chain guard.** Path queries now only read *own*
+  properties and refuse the dangerous key names, so expressions like
+  `["__proto__"]` or `.constructor` return `undefined` instead of leaking
+  `Object.prototype` / built-in constructors.
+- **Explicit safe YAML schema.** YAML parsing now pins the code-free `core`
+  schema (YAML 1.2) with an explicit alias-count cap and silenced tag warnings,
+  making the "no custom-tag code execution" guarantee explicit and stable.
+- **Dependencies.** Bumped dev-only `vitest` (→ ^4) and `esbuild` (→ ^0.25) to
+  clear 5 moderate `npm audit` advisories (esbuild/vite dev-server CVEs). No
+  runtime dependencies were affected. `npm audit` now reports 0 vulnerabilities.
+
+### Added
+
+- `SECURITY_REVIEW.md` documenting the audit and dispositions, plus a
+  `test/security.test.ts` regression suite (prototype pollution on parse, query
+  prototype-traversal guard, YAML tag rejection, alias-bomb guard).
+
 ## [0.1.0] - 2026-05-22
 
 ### Added

@@ -70,6 +70,18 @@ describe("query — missing paths", () => {
   });
 });
 
+describe("query — prototype-chain safety", () => {
+  it("does not return prototype members for dangerous keys", () => {
+    expect(query(DATA, '["__proto__"]')).toBeUndefined();
+    expect(query(DATA, ".constructor")).toBeUndefined();
+    expect(query(DATA, ".prototype")).toBeUndefined();
+  });
+
+  it("does not return inherited members", () => {
+    expect(query(DATA, ".toString")).toBeUndefined();
+  });
+});
+
 describe("parseQuery — errors", () => {
   it("throws on an unclosed bracket", () => {
     expect(() => parseQuery("users[0")).toThrow(QueryError);
